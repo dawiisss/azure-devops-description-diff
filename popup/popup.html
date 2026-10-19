@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Azure DevOps Description Diff</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="header-brand">
+        <img src="../icons/icon32.png" alt="Logo" class="logo-icon">
+        <div>
+          <h1 class="title">ADO Description Diff</h1>
+          <div class="status-indicator" id="statusIndicator">
+            <span class="status-dot"></span>
+            <span class="status-text" id="statusText">Checking page...</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Settings -->
+    <main class="popup-body">
+      <!-- Master Toggle -->
+      <div class="setting-item toggle-item">
+        <div class="setting-label-group">
+          <label for="enableToggle" class="setting-title">Enable Inline Diffs</label>
+          <span class="setting-desc">Automatically format Description changes</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="enableToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Default View Mode -->
+      <div class="setting-item">
+        <label class="setting-title" for="defaultViewSelect">Default View Mode</label>
+        <div class="segmented-control">
+          <button type="button" class="segment-btn active" data-view="inline" id="btnViewInline">Inline</button>
+          <button type="button" class="segment-btn" data-view="split" id="btnViewSplit">Side-by-Side</button>
+          <button type="button" class="segment-btn" data-view="original" id="btnViewOriginal">Original</button>
+        </div>
+      </div>
+
+      <!-- Focus Changes Toggle -->
+      <div class="setting-item toggle-item">
+        <div class="setting-label-group">
+          <label for="focusToggle" class="setting-title">Focus Changes</label>
+          <span class="setting-desc">Collapse long unchanged paragraphs</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="focusToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <a href="#" id="optionsLink" class="footer-link">Custom Domains & Options</a>
+      <span class="version-tag">v1.0.0</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

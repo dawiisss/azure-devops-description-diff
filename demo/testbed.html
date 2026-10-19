@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Azure DevOps Work Item History - Extension Preview</title>
+  <link rel="stylesheet" href="../content/styles.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f3f2f1;
+      color: #201f1e;
+      padding: 24px;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    body.theme-dark {
+      background-color: #1e1e1e;
+      color: #cccccc;
+    }
+
+    /* Demo toolbar */
+    .demo-bar {
+      max-width: 1040px;
+      margin: 0 auto 16px auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: 1px solid #e1dfdd;
+    }
+    body.theme-dark .demo-bar {
+      background-color: #252526;
+      border-color: #3c3c3c;
+    }
+    .demo-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .demo-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .demo-btn {
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: 1px solid #8a8886;
+      background: #ffffff;
+      color: #201f1e;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+    body.theme-dark .demo-btn {
+      background: #333333;
+      color: #cccccc;
+      border-color: #555555;
+    }
+
+    /* Mock Azure DevOps Work Item Modal */
+    .ado-workitem-card {
+      max-width: 1040px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e1dfdd;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+    body.theme-dark .ado-workitem-card {
+      background: #252526;
+      border-color: #3c3c3c;
+    }
+
+    /* Work Item Header */
+    .ado-wi-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #edebe9;
+      background-color: #faf9f8;
+    }
+    body.theme-dark .ado-wi-header {
+      background-color: #1f1f1f;
+      border-color: #333333;
+    }
+    .ado-wi-id-type {
+      font-size: 12px;
+      color: #605e5c;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .ado-wi-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #201f1e;
+    }
+    body.theme-dark .ado-wi-title {
+      color: #ffffff;
+    }
+
+    /* Tabs */
+    .ado-tabs {
+      display: flex;
+      border-bottom: 1px solid #edebe9;
+      padding: 0 16px;
+      background: #faf9f8;
+      gap: 4px;
+    }
+    body.theme-dark .ado-tabs {
+      background: #1f1f1f;
+      border-color: #333333;
+    }
+    .ado-tab {
+      padding: 10px 16px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #605e5c;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+    }
+    .ado-tab.active {
+      color: #0078d4;
+      border-bottom-color: #0078d4;
+      font-weight: 600;
+    }
+
+    /* History Content Layout */
+    .ado-history-layout {
+      display: flex;
+      min-height: 480px;
+    }
+    .ado-history-sidebar {
+      width: 280px;
+      border-right: 1px solid #edebe9;
+      background: #faf9f8;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    body.theme-dark .ado-history-sidebar {
+      background: #1f1f1f;
+      border-color: #333333;
+    }
+    .ado-rev-item {
+      padding: 10px 12px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      background: #ffffff;
+      font-size: 12.5px;
+    }
+    body.theme-dark .ado-rev-item {
+      background: #252526;
+    }
+    .ado-rev-item.active {
+      border-color: #0078d4;
+      background: #eff6fc;
+    }
+    body.theme-dark .ado-rev-item.active {
+      background: #103352;
+    }
+    .ado-rev-num {
+      font-weight: 600;
+      color: #0078d4;
+      margin-bottom: 2px;
+    }
+    .ado-rev-user {
+      font-size: 12px;
+      color: #323130;
+    }
+    body.theme-dark .ado-rev-user {
+      color: #cccccc;
+    }
+    .ado-rev-date {
+      font-size: 11px;
+      color: #8a8886;
+    }
+
+    .ado-history-main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .ado-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    /* Bolt Table Mock */
+    .bolt-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #edebe9;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    body.theme-dark .bolt-table {
+      border-color: #3c3c3c;
+    }
+    .bolt-table-row {
+      display: flex;
+      border-bottom: 1px solid #edebe9;
+      flex-wrap: wrap;
+    }
+    body.theme-dark .bolt-table-row {
+      border-color: #3c3c3c;
+    }
+    .bolt-table-cell {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .bolt-table-cell:first-child {
+      width: 140px;
+      font-weight: 600;
+      color: #605e5c;
+      flex-shrink: 0;
+      background-color: #faf9f8;
+      border-right: 1px solid #edebe9;
+    }
+    body.theme-dark .bolt-table-cell:first-child {
+      background-color: #1f1f1f;
+      border-color: #3c3c3c;
+      color: #969696;
+    }
+    .old-value, .new-value {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* Details Tab Mock */
+    .ado-details-layout {
+      padding: 24px;
+      display: none;
+    }
+    .ado-details-field {
+      margin-bottom: 20px;
+    }
+    .ado-field-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #605e5c;
+      margin-bottom: 6px;
+    }
+    body.theme-dark .ado-field-label {
+      color: #a19f9d;
+    }
+    .ado-editor-mock {
+      border: 1px solid #c8c6c4;
+      border-radius: 4px;
+      padding: 14px 16px;
+      background: #ffffff;
+      min-height: 120px;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    body.theme-dark .ado-editor-mock {
+      background: #2b2b2b;
+      border-color: #484644;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Demo Control Bar -->
+  <div class="demo-bar">
+    <div class="demo-title">Azure DevOps History Diff Extension - Live Preview</div>
+    <div class="demo-controls">
+      <button class="demo-btn" id="toggleThemeBtn">Toggle Dark Mode</button>
+      <button class="demo-btn" id="switchRevBtn">Switch to Revision 2</button>
+    </div>
+  </div>
+
+  <!-- Mock Work Item -->
+  <div class="ado-workitem-card">
+    <div class="ado-wi-header">
+      <div class="ado-wi-id-type">Bug 10428 • State: Active • Area: Auth / Identity</div>
+      <div class="ado-wi-title">Fix authentication timeout when connecting via OAuth 2.0 with PKCE</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="ado-tabs" role="tablist">
+      <div class="ado-tab" role="tab" id="detailsTab" aria-selected="false">Details</div>
+      <div class="ado-tab active" role="tab" id="historyTab" aria-selected="true">History</div>
+      <div class="ado-tab" role="tab">Links (4)</div>
+      <div class="ado-tab" role="tab">Attachments (1)</div>
+    </div>
+
+    <!-- Details Tab Layout (Native editor - extension must NEVER touch this) -->
+    <div class="ado-details-layout work-item-form-details" id="adoDetailsLayout">
+      <div class="ado-details-field">
+        <div class="ado-field-label">Assigned To</div>
+        <div>Sarah Connor</div>
+      </div>
+      <div class="ado-details-field">
+        <div class="ado-field-label">Description</div>
+        <div class="ado-editor-mock work-item-description rooster-editor" contenteditable="true">
+          <p>Users report that when attempting to authenticate via <b>OAuth 2.0 with PKCE</b> on mobile devices, the connection drops after 30 seconds due to gateway timeout.</p>
+          <p>Reproduction steps:</p>
+          <ol>
+            <li>Launch client mobile application</li>
+            <li>Click on Sign in with Google or Microsoft SSO</li>
+            <li>Wait for authentication redirect via custom URI scheme</li>
+            <li>Verify error code 504 on console</li>
+          </ol>
+          <p>Expected result: Auth succeeds within 3 seconds without timeout.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Tab Layout -->
+    <div class="ado-history-layout work-item-history-control" id="adoHistoryLayout">
+      <!-- Revisions List -->
+      <div class="ado-history-sidebar">
+        <div class="ado-rev-item active" id="rev3Item">
+          <div class="ado-rev-num">Revision 3 (Latest)</div>
+          <div class="ado-rev-user">Sarah Connor</div>
+          <div class="ado-rev-date">Today at 09:45 AM</div>
+        </div>
+        <div class="ado-rev-item" id="rev2Item">
+          <div class="ado-rev-num">Revision 2</div>
+          <div class="ado-rev-user">Alex Smith</div>
+          <div class="ado-rev-date">Yesterday at 04:15 PM</div>
+        </div>
+        <div class="ado-rev-item">
+          <div class="ado-rev-num">Revision 1 (Created)</div>
+          <div class="ado-rev-user">Alex Smith</div>
+          <div class="ado-rev-date">3 days ago</div>
+        </div>
+      </div>
+
+      <!-- Main History Details -->
+      <div class="ado-history-main">
+        <h3 class="ado-section-title">Field Changes</h3>
+
+        <div class="bolt-table" id="fieldsTable">
+          <!-- State Row -->
+          <div class="bolt-table-row">
+            <div class="bolt-table-cell">State</div>
+            <div class="bolt-table-cell old-value">New</div>
+            <div class="bolt-table-cell new-value">Active</div>
+          </div>
+
+          <!-- Description Row (Targeted by extension!) -->
+          <div class="bolt-table-row" id="descriptionRow">
+            <div class="bolt-table-cell">Description</div>
+            <div class="bolt-table-cell old-value" id="oldDescCell">
+              <p>Users report that when attempting to authenticate via <b>OAuth 2.0</b>, the connection drops after 10 seconds.</p>
+              <p>Reproduction steps:</p>
+              <ol>
+                <li>Launch client application</li>
+                <li>Click on Sign in with Google</li>
+                <li>Wait for authentication redirect</li>
+              </ol>
+              <p>Expected result: Auth succeeds immediately.</p>
+            </div>
+            <div class="bolt-table-cell new-value" id="newDescCell">
+              <p>Users report that when attempting to authenticate via <b>OAuth 2.0 with PKCE</b> on mobile devices, the connection drops after 30 seconds due to gateway timeout.</p>
+              <p>Reproduction steps:</p>
+              <ol>
+                <li>Launch client mobile application</li>
+                <li>Click on Sign in with Google or Microsoft SSO</li>
+                <li>Wait for authentication redirect via custom URI scheme</li>
+                <li>Verify error code 504 on console</li>
+              </ol>
+              <p>Expected result: Auth succeeds within 3 seconds without timeout.</p>
+            </div>
+          </div>
+
+          <!-- Priority Row -->
+          <div class="bolt-table-row">
+            <div class="bolt-table-cell">Priority</div>
+            <div class="bolt-table-cell old-value">3</div>
+            <div class="bolt-table-cell new-value">1 - High</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Extension Scripts -->
+  <script src="../content/vendor/purify.js"></script>
+  <script src="../content/htmldiff.js"></script>
+  <script src="../content/content.js"></script>
+
+  <!-- Demo Control Script -->
+  <script>
+    const toggleThemeBtn = document.getElementById('toggleThemeBtn');
+    toggleThemeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('theme-dark');
+    });
+
+    const detailsTab = document.getElementById('detailsTab');
+    const historyTab = document.getElementById('historyTab');
+    const detailsLayout = document.getElementById('adoDetailsLayout');
+    const historyLayout = document.getElementById('adoHistoryLayout');
+
+    detailsTab.addEventListener('click', () => {
+      detailsTab.classList.add('active');
+      detailsTab.setAttribute('aria-selected', 'true');
+      historyTab.classList.remove('active');
+      historyTab.setAttribute('aria-selected', 'false');
+      detailsLayout.style.display = 'block';
+      historyLayout.style.display = 'none';
+    });
+
+    historyTab.addEventListener('click', () => {
+      historyTab.classList.add('active');
+      historyTab.setAttribute('aria-selected', 'true');
+      detailsTab.classList.remove('active');
+      detailsTab.setAttribute('aria-selected', 'false');
+      detailsLayout.style.display = 'none';
+      historyLayout.style.display = 'flex';
+    });
+
+    const switchRevBtn = document.getElementById('switchRevBtn');
+    let isRev2 = false;
+
+    switchRevBtn.addEventListener('click', () => {
+      isRev2 = !isRev2;
+      const oldCell = document.getElementById('oldDescCell');
+      const newCell = document.getElementById('newDescCell');
+
+      if (isRev2) {
+        switchRevBtn.textContent = 'Switch to Revision 3';
+        document.getElementById('rev2Item').classList.add('active');
+        document.getElementById('rev3Item').classList.remove('active');
+
+        oldCell.innerHTML = '<p>Initial rough draft description created during backlog grooming.</p>';
+        newCell.innerHTML = '<p>Users report that when attempting to authenticate via <b>OAuth 2.0</b>, the connection drops after 10 seconds.</p><p>Reproduction steps:</p><ol><li>Launch client application</li><li>Click on Sign in with Google</li><li>Wait for authentication redirect</li></ol><p>Expected result: Auth succeeds immediately.</p>';
+      } else {
+        switchRevBtn.textContent = 'Switch to Revision 2';
+        document.getElementById('rev3Item').classList.add('active');
+        document.getElementById('rev2Item').classList.remove('active');
+
+        oldCell.innerHTML = '<p>Users report that when attempting to authenticate via <b>OAuth 2.0</b>, the connection drops after 10 seconds.</p><p>Reproduction steps:</p><ol><li>Launch client application</li><li>Click on Sign in with Google</li><li>Wait for authentication redirect</li></ol><p>Expected result: Auth succeeds immediately.</p>';
+        newCell.innerHTML = '<p>Users report that when attempting to authenticate via <b>OAuth 2.0 with PKCE</b> on mobile devices, the connection drops after 30 seconds due to gateway timeout.</p><p>Reproduction steps:</p><ol><li>Launch client mobile application</li><li>Click on Sign in with Google or Microsoft SSO</li><li>Wait for authentication redirect via custom URI scheme</li><li>Verify error code 504 on console</li></ol><p>Expected result: Auth succeeds within 3 seconds without timeout.</p>';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "ado-description-history-diff",
+  "version": "1.0.2",
+  "description": "Cross-browser extension for Firefox and Chrome that shows inline diffs for Description changes in Azure DevOps Work Item History.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "package": "node package-extension.js"
+  },
+  "keywords": [
+    "azure-devops",
+    "chrome-extension",
+    "firefox-addon",
+    "inline-diff",
+    "work-items"
+  ],
+  "author": "dawiisss (K3to)",
+  "homepage": "https://github.com/dawiisss/",
+  "license": "MIT",
+  "devDependencies": {
+    "dompurify": "3.4.17",
+    "playwright": "^1.62.1"
+  }
+}

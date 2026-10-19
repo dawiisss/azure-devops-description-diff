@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Options - Azure DevOps Description Diff</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-wrapper">
+    <!-- Header -->
+    <header class="options-header">
+      <div class="header-content">
+        <img src="../icons/icon48.png" alt="Logo" class="options-logo">
+        <div>
+          <h1>Azure DevOps Description Diff Settings</h1>
+          <p class="subtitle">Customize inline diff behavior and configure custom on-premise domains</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="options-container">
+      <!-- General Preferences Card -->
+      <section class="card">
+        <h2 class="card-title">General Preferences</h2>
+        
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="optDefaultView" class="label-title">Default View Mode</label>
+            <p class="label-desc">Choose how description changes are rendered by default</p>
+          </div>
+          <select id="optDefaultView" class="select-control">
+            <option value="inline">Inline Diff (Unified)</option>
+            <option value="split">Side-by-Side (Split)</option>
+            <option value="original">Original (Native Azure DevOps)</option>
+          </select>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label for="optCollapseUnchanged" class="label-title">Focus Changes</label>
+            <p class="label-desc">Automatically collapse long unchanged paragraphs in large descriptions</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="optCollapseUnchanged">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Custom Domains Card -->
+      <section class="card">
+        <h2 class="card-title">On-Premise Azure DevOps / TFS Domains</h2>
+        <p class="card-desc">
+          By default, this extension runs on <code>dev.azure.com</code> and <code>*.visualstudio.com</code>.
+          If your team uses an internal on-premise Azure DevOps Server or TFS instance, add its domain or URL pattern below.
+        </p>
+
+        <div class="add-domain-box">
+          <input type="text" id="newDomainInput" placeholder="e.g. tfs.company.com or https://devops.internal" class="text-input">
+          <button type="button" id="btnAddDomain" class="btn btn-primary">Add Domain</button>
+        </div>
+
+        <div class="domain-list" id="domainList">
+          <div class="empty-domains-msg" id="emptyDomainsMsg">No custom domains added yet.</div>
+        </div>
+      </section>
+
+      <!-- About Card -->
+      <section class="card">
+        <h2 class="card-title">About & Support</h2>
+        <p class="card-desc">
+          <strong>Azure DevOps Description Diff</strong> is a cross-browser extension designed for Firefox and Chrome.
+          It runs 100% locally in your browser with zero data collection.
+        </p>
+        <div class="about-meta">
+          <span>Version 1.0.0</span>
+          <span>•</span>
+          <span>Manifest V3</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- Save Toast -->
+    <div id="saveToast" class="save-toast">Preferences saved</div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

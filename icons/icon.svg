@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0078D4"/>
+      <stop offset="100%" stop-color="#005A9E"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Background Card -->
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bg)" filter="url(#shadow)"/>
+  <!-- Branching / Diff Line -->
+  <path d="M 44 42 L 44 86" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M 44 42 Q 60 52 84 64" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+  <!-- Base node (White) -->
+  <circle cx="44" cy="86" r="12" fill="#ffffff"/>
+  <!-- Deleted node (Red / Strikethrough) -->
+  <circle cx="44" cy="42" r="12" fill="#FF5252" stroke="#ffffff" stroke-width="3"/>
+  <line x1="38" y1="42" x2="50" y2="42" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <!-- Added node (Green / Plus) -->
+  <circle cx="84" cy="64" r="14" fill="#4CAF50" stroke="#ffffff" stroke-width="3"/>
+  <line x1="77" y1="64" x2="91" y2="64" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <line x1="84" y1="57" x2="84" y2="71" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+</svg>

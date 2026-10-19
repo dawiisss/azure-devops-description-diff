@@ -1,0 +1,421 @@
+/* ==========================================================================
+   ADO Description History Diff - Styles
+   Native-feeling inline diffs for Azure DevOps Work Item History
+   ========================================================================== */
+
+:root {
+  --ado-diff-bg: #ffffff;
+  --ado-diff-border: #e1dfdd;
+  --ado-diff-header-bg: #f8f8f8;
+  --ado-diff-text: #201f1e;
+  --ado-diff-subtext: #605e5c;
+  
+  /* Inline Diff Highlights - Light Theme */
+  --ado-diff-ins-bg: #d4fcbc;
+  --ado-diff-ins-text: #134e19;
+  --ado-diff-ins-border: #9be9a8;
+  
+  --ado-diff-del-bg: #fcc2c2;
+  --ado-diff-del-text: #78101a;
+  --ado-diff-del-border: #f85149;
+  
+  --ado-diff-btn-bg: #ffffff;
+  --ado-diff-btn-border: #d2d0ce;
+  --ado-diff-btn-text: #323130;
+  --ado-diff-btn-hover: #edebe9;
+  --ado-diff-btn-active-bg: #0078d4;
+  --ado-diff-btn-active-text: #ffffff;
+  
+  --ado-diff-badge-ins-bg: #e6ffed;
+  --ado-diff-badge-ins-text: #1a7f37;
+  --ado-diff-badge-del-bg: #ffebe9;
+  --ado-diff-badge-del-text: #cf222e;
+}
+
+/* Dark Mode Support (Azure DevOps dark theme detection) */
+body.theme-dark,
+body.vss-dark-theme,
+body.dark,
+[data-theme="dark"],
+body[class*="dark-theme"] {
+    --ado-diff-bg: #252526;
+    --ado-diff-border: #3c3c3c;
+    --ado-diff-header-bg: #1e1e1e;
+    --ado-diff-text: #cccccc;
+    --ado-diff-subtext: #969696;
+    
+    --ado-diff-ins-bg: rgba(46, 160, 67, 0.35);
+    --ado-diff-ins-text: #7ee787;
+    --ado-diff-ins-border: #238636;
+    
+    --ado-diff-del-bg: rgba(248, 81, 73, 0.35);
+    --ado-diff-del-text: #ffa198;
+    --ado-diff-del-border: #da3633;
+    
+    --ado-diff-btn-bg: #333333;
+    --ado-diff-btn-border: #454545;
+    --ado-diff-btn-text: #cccccc;
+    --ado-diff-btn-hover: #3e3e42;
+    --ado-diff-btn-active-bg: #0078d4;
+    --ado-diff-btn-active-text: #ffffff;
+    
+    --ado-diff-badge-ins-bg: rgba(46, 160, 67, 0.2);
+    --ado-diff-badge-ins-text: #7ee787;
+    --ado-diff-badge-del-bg: rgba(248, 81, 73, 0.2);
+    --ado-diff-badge-del-text: #ffa198;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ado-diff-bg: #252526;
+    --ado-diff-border: #3c3c3c;
+    --ado-diff-header-bg: #1e1e1e;
+    --ado-diff-text: #cccccc;
+    --ado-diff-subtext: #969696;
+    --ado-diff-ins-bg: rgba(46, 160, 67, 0.35);
+    --ado-diff-ins-text: #7ee787;
+    --ado-diff-ins-border: #238636;
+    --ado-diff-del-bg: rgba(248, 81, 73, 0.35);
+    --ado-diff-del-text: #ffa198;
+    --ado-diff-del-border: #da3633;
+    --ado-diff-btn-bg: #333333;
+    --ado-diff-btn-border: #454545;
+    --ado-diff-btn-text: #cccccc;
+    --ado-diff-btn-hover: #3e3e42;
+    --ado-diff-btn-active-bg: #0078d4;
+    --ado-diff-btn-active-text: #ffffff;
+    --ado-diff-badge-ins-bg: rgba(46, 160, 67, 0.2);
+    --ado-diff-badge-ins-text: #7ee787;
+    --ado-diff-badge-del-bg: rgba(248, 81, 73, 0.2);
+    --ado-diff-badge-del-text: #ffa198;
+  }
+}
+
+/* Hide raw original cells when diff is active */
+.ado-diff-hidden-raw {
+  display: none !important;
+}
+
+/* Main Diff Container */
+.ado-diff-widget {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 6px 0 10px 0;
+  border: 1px solid var(--ado-diff-border);
+  border-radius: 6px;
+  background-color: var(--ado-diff-bg);
+  box-shadow: 0 1.6px 3.6px 0 rgba(0, 0, 0, 0.08), 0 0.3px 0.9px 0 rgba(0, 0, 0, 0.04);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ado-diff-text);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Header Toolbar */
+.ado-diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: var(--ado-diff-header-bg);
+  border-bottom: 1px solid var(--ado-diff-border);
+  user-select: none;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ado-diff-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ado-diff-title-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ado-diff-text);
+}
+
+.ado-diff-title-icon {
+  width: 15px;
+  height: 15px;
+  color: #0078d4;
+  fill: currentColor;
+}
+
+/* Stats Badges */
+.ado-diff-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ado-diff-badge-ins {
+  padding: 1px 6px;
+  border-radius: 10px;
+  background-color: var(--ado-diff-badge-ins-bg);
+  color: var(--ado-diff-badge-ins-text);
+}
+
+.ado-diff-badge-del {
+  padding: 1px 6px;
+  border-radius: 10px;
+  background-color: var(--ado-diff-badge-del-bg);
+  color: var(--ado-diff-badge-del-text);
+}
+
+.ado-diff-badge-nochange {
+  padding: 1px 6px;
+  border-radius: 10px;
+  background-color: var(--ado-diff-border);
+  color: var(--ado-diff-subtext);
+  font-size: 11px;
+}
+
+/* Toolbar Controls */
+.ado-diff-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ado-diff-btn-group {
+  display: inline-flex;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--ado-diff-btn-border);
+}
+
+.ado-diff-btn {
+  background-color: var(--ado-diff-btn-bg);
+  border: none;
+  color: var(--ado-diff-btn-text);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-right: 1px solid var(--ado-diff-btn-border);
+}
+
+.ado-diff-btn:last-child {
+  border-right: none;
+}
+
+.ado-diff-btn:hover {
+  background-color: var(--ado-diff-btn-hover);
+}
+
+.ado-diff-btn.active {
+  background-color: var(--ado-diff-btn-active-bg);
+  color: var(--ado-diff-btn-active-text);
+  font-weight: 600;
+}
+
+.ado-diff-action-btn {
+  background-color: var(--ado-diff-btn-bg);
+  border: 1px solid var(--ado-diff-btn-border);
+  border-radius: 4px;
+  color: var(--ado-diff-btn-text);
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ado-diff-action-btn:hover {
+  background-color: var(--ado-diff-btn-hover);
+}
+
+.ado-diff-action-btn.active {
+  background-color: #e6f2fb;
+  border-color: #0078d4;
+  color: #0078d4;
+}
+
+body.theme-dark .ado-diff-action-btn.active,
+body.dark .ado-diff-action-btn.active {
+  background-color: rgba(0, 120, 212, 0.25);
+  border-color: #0078d4;
+  color: #4da3ff;
+}
+
+/* Content Area */
+.ado-diff-content {
+  padding: 12px 16px;
+  overflow-x: auto;
+  min-height: 36px;
+  background-color: var(--ado-diff-bg);
+}
+
+/* Inline Diff Highlighting */
+.ado-diff-highlight,
+ins.ado-diff-highlight,
+ins.diff-class {
+  background-color: var(--ado-diff-ins-bg) !important;
+  color: var(--ado-diff-ins-text) !important;
+  text-decoration: none !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  font-weight: 500;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+del.ado-diff-highlight,
+del.diff-class {
+  background-color: var(--ado-diff-del-bg) !important;
+  color: var(--ado-diff-del-text) !important;
+  text-decoration: line-through !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  margin: 0 1px;
+  opacity: 0.88;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Split (Side-by-Side) View */
+.ado-diff-split-container {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.ado-diff-split-pane {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--ado-diff-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ado-diff-split-pane-header {
+  padding: 6px 10px;
+  background-color: var(--ado-diff-header-bg);
+  border-bottom: 1px solid var(--ado-diff-border);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ado-diff-subtext);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ado-diff-split-pane-body {
+  padding: 10px 14px;
+  overflow-x: auto;
+}
+
+/* Focus Changes / Collapsed Unchanged Blocks */
+.ado-diff-collapsed-banner {
+  margin: 8px 0;
+  padding: 5px 12px;
+  background-color: var(--ado-diff-header-bg);
+  border: 1px dashed var(--ado-diff-border);
+  border-radius: 4px;
+  color: var(--ado-diff-subtext);
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.ado-diff-collapsed-banner:hover {
+  background-color: var(--ado-diff-btn-hover);
+  color: var(--ado-diff-text);
+}
+
+.ado-diff-unchanged-hidden {
+  display: none !important;
+}
+
+/* Floating Status Pill */
+.ado-diff-floating-pill {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background-color: #0078d4;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 3.2px 7.2px 0 rgba(0, 0, 0, 0.18), 0 0.6px 1.8px 0 rgba(0, 0, 0, 0.12);
+  z-index: 99999;
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.85;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.ado-diff-floating-pill:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 4.8px 10px 0 rgba(0, 0, 0, 0.24);
+}
+
+.ado-diff-floating-pill .pill-icon {
+  font-size: 13px;
+}
+
+.ado-diff-floating-pill .pill-btn-rescan {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+  margin-left: 2px;
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ado-diff-floating-pill .pill-btn-rescan:hover {
+  opacity: 1;
+}
+
+/* Copy Toast */
+.ado-diff-toast {
+  position: fixed;
+  bottom: 60px;
+  right: 16px;
+  background-color: #323130;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  z-index: 100000;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.ado-diff-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
