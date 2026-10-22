@@ -1,6 +1,6 @@
 /**
  * ==========================================================================
- * Azure DevOps Description History Diff - Universal Content Script v1.0.2
+ * Azure DevOps Description History Diff - Universal Content Script v1.0.3
  * ==========================================================================
  * Works across all Azure DevOps versions (Cloud, Server, On-Premise, TFS)
  * Uses multi-strategy DOM detection within the active History tab.
@@ -10,10 +10,10 @@
   'use strict';
 
   // Prevent multiple injections in same frame
-  if (window.__ADO_DESCRIPTION_DIFF_V102_INITIALIZED__) {
+  if (window.__ADO_DESCRIPTION_DIFF_V103_INITIALIZED__) {
     return;
   }
-  window.__ADO_DESCRIPTION_DIFF_V102_INITIALIZED__ = true;
+  window.__ADO_DESCRIPTION_DIFF_V103_INITIALIZED__ = true;
 
   // Match supported hosts exactly; DOM markers and URL substrings are not an allowlist.
   function isAzureDevOps() {
@@ -47,6 +47,31 @@
   let configLoaded = false;
   const processedDiffs = new Map();
   const widgetControls = new WeakMap();
+
+  const SUPPORTED_FIELDS = [
+    { label: 'Description', referenceName: 'System.Description', names: ['Description', 'System.Description'] },
+    { label: 'Acceptance Criteria', referenceName: 'Microsoft.VSTS.Common.AcceptanceCriteria',
+      names: ['Acceptance Criteria', 'AcceptanceCriteria', 'Microsoft.VSTS.Common.AcceptanceCriteria'] }
+  ];
+  const FIELD_NAMES = new Map(SUPPORTED_FIELDS.flatMap(field =>
+    field.names.map(name => [name.toLowerCase(), field])));
+  const FIELD_PATTERN = SUPPORTED_FIELDS.flatMap(field => field.names)
+    .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')).join('|');
+  const FIELD_PREFIX = new RegExp('^\\s*(' + FIELD_PATTERN + ')\\s*:\\s*', 'i');
+  const FEED_FIELD = new RegExp('^\\s*(?:changed\\s+(?:the\\s+)?(' + FIELD_PATTERN + ')\\b|(' +
+    FIELD_PATTERN + ')\\s*(?:changed\\b|:))', 'i');
+
+  function fieldForName(name) {
+    return FIELD_NAMES.get((name || '').trim().replace(/\s*:\s*$/, '').replace(/\s+/g, ' ').toLowerCase()) || null;
+  }
+
+  function fieldForLabel(el) {
+    return fieldForName(el.textContent);
+  }
+
+  function fieldForContainer(el) {
+    return fieldForName(el.getAttribute('data-field-reference-name') || el.getAttribute('data-field-name'));
+  }
 
   // Static icon definitions; construct SVG nodes without parsing HTML.
   const ICONS = {
@@ -237,7 +262,7 @@
   /**
    * Creates the diff widget element
    */
-  function createDiffWidget(oldHtml, newHtml, onModeChange) {
+  function createDiffWidget(oldHtml, newHtml, onModeChange, field) {
     const diffEngine = window.htmldiff || (typeof htmldiff === 'function' ? htmldiff : null);
     if (!diffEngine) {
       console.warn('[ADO History Diff] htmldiff engine not found');
@@ -249,6 +274,7 @@
 
     const widget = document.createElement('div');
     widget.className = 'ado-diff-widget';
+    widget.dataset.adoDiffField = field.referenceName;
 
     // Header Toolbar
     const header = document.createElement('div');
@@ -258,7 +284,7 @@
     headerLeft.className = 'ado-diff-header-left';
     
     const titleBadge = createElement('div', 'ado-diff-title-badge');
-    titleBadge.append(createIcon('diff'), createElement('span', '', 'Description Diff'));
+    titleBadge.append(createIcon('diff'), createElement('span', '', `${field.label} Diff`));
     const statsBadges = createElement('div', 'ado-diff-stats');
     if (stats.hasChanges) {
       if (stats.addedWords > 0) {
@@ -310,7 +336,7 @@
     btnCopy.className = 'ado-diff-action-btn';
     const copyLabel = createElement('span', '', 'Copy');
     btnCopy.append(createIcon('copy'), copyLabel);
-    btnCopy.title = 'Copy new description to clipboard';
+    btnCopy.title = `Copy new ${field.label.toLowerCase()} to clipboard`;
 
     headerRight.appendChild(btnGroup);
     headerRight.appendChild(btnFocus);
@@ -326,7 +352,7 @@
 
     const inlineContainer = document.createElement('div');
     inlineContainer.className = 'ado-diff-inline-container';
-    appendDescription(inlineContainer, diffHtml, '(Empty description)');
+    appendDescription(inlineContainer, diffHtml, `(Empty ${field.label.toLowerCase()})`);
 
     const splitContainer = document.createElement('div');
     splitContainer.className = 'ado-diff-split-container';
@@ -422,7 +448,7 @@
     btnCopy.addEventListener('click', () => {
       const plainText = descriptionFragment(rightHtml).textContent || '';
       navigator.clipboard.writeText(plainText).then(() => {
-        showToast('Description copied to clipboard');
+        showToast(`${field.label} copied to clipboard`);
         copyLabel.textContent = 'Copied!';
         setTimeout(() => {
           copyLabel.textContent = 'Copy';
@@ -476,13 +502,14 @@
   function refreshProcessedDiffs() {
     for (const [container, record] of processedDiffs) {
       if (!container.isConnected || !container.contains(record.widget) ||
+          isInsideForbiddenArea(container) ||
           cloneSource(container).innerHTML !== record.sourceHtml) {
         removeDiff(container);
       }
     }
   }
 
-  function mountDiff(container, oldHtml, newHtml, targets, { wrapText = false, after = null } = {}) {
+  function mountDiff(container, oldHtml, newHtml, targets, { wrapText = false, after = null, field } = {}) {
     if ((!oldHtml && !newHtml) || oldHtml === newHtml) return;
 
     const textWrappers = [];
@@ -501,7 +528,7 @@
 
     const widget = createDiffWidget(oldHtml, newHtml, showOriginal => {
       targets.forEach(el => el.classList.toggle('ado-diff-hidden-raw', !showOriginal));
-    });
+    }, field);
     if (!widget) {
       textWrappers.forEach(el => el.replaceWith(...el.childNodes));
       return;
@@ -535,7 +562,18 @@
     if (!container) return null;
 
     const clone = cloneSource(container);
-    const strikeSelector = 's, strike, del, [style*="line-through"], [class*="strike"], [class*="deleted"], [class*="removed"]';
+    const strikeSelector = 's, strike, del, [style*="line-through"], .deleted, .removed, .diff-removed';
+    const insertionSelector = 'ins, .added, .inserted, .diff-added';
+    // Native inline comparisons contain shared text as well as deletions and
+    // insertions. Reconstruct both complete revisions before computing our diff.
+    if (clone.querySelector(insertionSelector)) {
+      const previous = clone.cloneNode(true);
+      previous.querySelectorAll(insertionSelector).forEach(el => el.remove());
+      previous.querySelectorAll(strikeSelector).forEach(el => el.replaceWith(...el.childNodes));
+      clone.querySelectorAll(strikeSelector).forEach(el => el.remove());
+      clone.querySelectorAll(insertionSelector).forEach(el => el.replaceWith(...el.childNodes));
+      return { oldHtml: previous.innerHTML.trim(), newHtml: clone.innerHTML.trim() };
+    }
     // Nested strike elements represent one old value, not repeated copies of it.
     const strikeElements = Array.from(clone.querySelectorAll(strikeSelector))
       .filter(el => !el.parentElement.closest(strikeSelector));
@@ -550,7 +588,7 @@
     // Some older feeds put the field label in a leading text node.
     const firstText = Array.from(clone.childNodes).find(node => node.textContent.trim());
     if (firstText && firstText.nodeType === 3) {
-      firstText.textContent = firstText.textContent.replace(/^\s*(?:System\.)?Description\s*:\s*/i, '');
+      firstText.textContent = firstText.textContent.replace(FIELD_PREFIX, '');
     }
 
     const newHtml = clone.innerHTML.trim();
@@ -580,7 +618,29 @@
       '[aria-label="Details" i][role="tabpanel"]',
       '.workitem-details-pane',
       '.work-item-details-pane',
-      '.work-item-form-mainContent'
+      // History shares the main form content wrapper with Details. Exclude the
+      // actual editors above, not the wrapper that also contains History.
+      '[role="listbox"]',
+      '[role="option"]',
+      '[role="menu"]',
+      '[role="menuitem"]',
+      '[role="menuitemcheckbox"]',
+      '[role="menuitemradio"]',
+      '[role="combobox"]',
+      '[role="checkbox"]',
+      '[role="toolbar"]',
+      '[role="tablist"]',
+      'button',
+      'select',
+      'option',
+      '.bolt-dropdown',
+      '.bolt-dropdown-popup',
+      '.bolt-menu',
+      '.bolt-filterbar',
+      '.ms-Callout',
+      '.ms-Dropdown',
+      '.history-filter',
+      '.history-toolbar'
     ].join(', '));
   }
 
@@ -589,6 +649,7 @@
    */
   function isVisible(el) {
     if (!el) return false;
+    if (el.closest('[hidden], [aria-hidden="true"]')) return false;
     if (el.offsetParent === null && el.offsetWidth === 0 && el.offsetHeight === 0) {
       return false;
     }
@@ -648,7 +709,7 @@
 
     // Fallback: If no explicit tab elements exist, check if a visible history container is present
     const historyContainers = document.querySelectorAll(
-      '.work-item-history-control, .workitem-history-control, .workitem-history, .work-item-history, .history-tab-content, .history-details, .work-item-form-history, .ado-history-layout, .ado-history-main'
+      '.work-item-history-control, .workitem-history-control, .workitem-history, .work-item-history, .history-tab-content, .history-details, .work-item-form-history, .ado-history-layout, .ado-history-main, .update-details .html-field-diff'
     );
     for (const c of historyContainers) {
       if (isVisible(c) && !isInsideForbiddenArea(c)) {
@@ -726,6 +787,15 @@
       });
     }
 
+    // Current Azure DevOps revision details use these wrappers even when there
+    // is no History-named ancestor or aria-controls link on the selected tab.
+    // Require the field wrapper inside update-details, not a generic details div.
+    document.querySelectorAll('.update-details .html-field-diff').forEach(field => {
+      if (isVisible(field) && !isInsideForbiddenArea(field)) {
+        containers.add(field.closest('.update-details'));
+      }
+    });
+
     // 4. Fallback: Check elements containing history revisions/feeds
     if (containers.size === 0) {
       const fallbackCandidates = document.querySelectorAll(
@@ -745,131 +815,173 @@
     return Array.from(containers).filter(c => !isInsideForbiddenArea(c));
   }
 
-  /**
-   * STRATEGY 1: Class-Agnostic "Description" Label Finder
-   * Finds any element whose visible text is "Description" (or "System.Description")
-   * strictly within the active History container and locates its corresponding old & new value containers.
-   */
-  function scanDescriptionByLabel(historyContainer) {
-    const allElements = historyContainer.querySelectorAll('*');
-    const labelCandidates = [];
+  // Require evidence of revision values. A supported field label also
+  // appears in the History field filter and the revision navigation list.
+  const OLD_VALUE_SELECTOR = [
+    '.old-value', '[class*="oldValue"]', '.old-value-container',
+    '.previous-value', '.field-old-value', '.html-diff-old', '.diff-html-old',
+    '[data-value-type="old"]', '[aria-label="Old value" i]'
+  ].join(', ');
+  const NEW_VALUE_SELECTOR = [
+    '.new-value', '[class*="newValue"]', '.new-value-container',
+    '.current-value', '.field-new-value', '.html-diff-new', '.diff-html-new',
+    '[data-value-type="new"]', '[aria-label="New value" i]'
+  ].join(', ');
+  const VALUE_SELECTOR = OLD_VALUE_SELECTOR + ', ' + NEW_VALUE_SELECTOR;
+  const CHANGE_SELECTOR = '.html-field-diff, .history-field-change, .field-change, [data-field-name], [data-field-reference-name]';
+  const CHANGE_BOUNDARY_SELECTOR = CHANGE_SELECTOR +
+    ', tr, [role="row"], .bolt-table-row, .ms-DetailsRow, .history-item, .feed-item, .bolt-card';
+  const STRIKE_SELECTOR = 's, strike, del, [style*="line-through"], .deleted, .removed, .diff-removed';
+  const INSERT_SELECTOR = 'ins, .added, .inserted, .diff-added';
 
-    for (let i = 0; i < allElements.length; i++) {
-      const el = allElements[i];
-      if (['SCRIPT', 'STYLE', 'INPUT', 'TEXTAREA', 'BUTTON'].includes(el.tagName)) continue;
-      if (el.closest('.ado-diff-widget, [data-ado-diff-processed]')) continue;
-      if (isInsideForbiddenArea(el)) continue;
-      if (el.children.length > 2) continue;
+  function scanNativeFields(historyContainer) {
+    const fields = Array.from(historyContainer.querySelectorAll('.html-field-diff'));
+    if (historyContainer.matches('.html-field-diff')) fields.unshift(historyContainer);
+    fields.forEach(field => {
+      if (isInsideForbiddenArea(field) || !isVisible(field) ||
+          field.closest('.html-field-value, .ado-diff-widget') ||
+          field.closest('[data-ado-diff-processed]')) return;
+      // Use the field's own heading or metadata. Authored markdown headings
+      // inside a value must not identify a different field.
+      const label = Array.from(field.children).find(el =>
+        !el.matches('.html-field-value, .ado-diff-widget') && fieldForLabel(el));
+      const definition = label ? fieldForLabel(label) : fieldForContainer(field);
+      if (!definition) return;
+      const values = Array.from(field.querySelectorAll('.html-field-value'))
+        .filter(el => el.closest('.html-field-diff') === field &&
+          !el.parentElement.closest('.html-field-value') && !isInsideForbiddenArea(el));
+      if (!values.length) return;
 
-      const txt = el.textContent.trim().toLowerCase();
-      if (txt === 'description' || txt === 'system.description') {
-        labelCandidates.push(el);
+      const previous = [];
+      const current = [];
+      for (const value of values) {
+        const clone = cloneSource(value);
+        const wrapper = clone.children.length === 1 ? clone.firstElementChild : null;
+        const isAdded = value.classList.contains('added');
+        const isRemoved = value.classList.contains('removed') || value.classList.contains('deleted');
+        if (isAdded && isRemoved) return;
+        let revision;
+        if (isAdded) revision = current;
+        else if (isRemoved) revision = previous;
+        else if (wrapper && wrapper.tagName === 'INS') revision = current;
+        else if (wrapper && wrapper.tagName === 'DEL') revision = previous;
+        else return; // Leave unsupported bodies intact rather than infer their order.
+
+        // Azure DevOps wraps each whole value in ins/del. Remove that one
+        // presentation wrapper, preserving ins/del authored inside the content.
+        if (wrapper && ['INS', 'DEL'].includes(wrapper.tagName)) {
+          wrapper.replaceWith(...wrapper.childNodes);
+        }
+        revision.push(sanitizeFieldHtml(clone.innerHTML));
+      }
+      // A missing side represents initial creation or clearing the field.
+      mountDiff(field, previous.join(''), current.join(''), values, { field: definition });
+    });
+  }
+
+  function valueElements(container, selector) {
+    return Array.from(container.querySelectorAll(selector)).filter(el =>
+      !isInsideForbiddenArea(el) && !el.closest('.ado-diff-widget') &&
+      // Nested wrappers naming the same value are one value, not two revisions.
+      !el.parentElement.closest(selector)
+    );
+  }
+
+  function mountFieldChange(container, label, field) {
+    if (!container || isInsideForbiddenArea(container) || !isVisible(container) ||
+        container.closest('[data-ado-diff-processed]') || container.querySelector('[data-ado-diff-processed]')) return false;
+
+    const labelBranch = label && Array.from(container.children).find(el => el === label || el.contains(label));
+    const belongsToChange = el => {
+      const field = el.closest(CHANGE_BOUNDARY_SELECTOR);
+      return (!field || field === container || field.contains(container)) &&
+        (!label || !el.contains(label)) && (!labelBranch || !labelBranch.contains(el));
+    };
+    const previous = valueElements(container, OLD_VALUE_SELECTOR).filter(belongsToChange);
+    const current = valueElements(container, NEW_VALUE_SELECTOR).filter(belongsToChange);
+    if (previous.length === 1 && current.length === 1 &&
+        !previous[0].contains(current[0]) && !current[0].contains(previous[0])) {
+      mountDiff(container, sanitizeFieldHtml(previous[0].innerHTML),
+        sanitizeFieldHtml(current[0].innerHTML), [previous[0], current[0]], { after: current[0], field });
+      return true;
+    }
+
+    // Native value bodies have explicit operation semantics. Unsupported
+    // native layouts must not fall through to the legacy strike heuristics.
+    if (container.matches('.html-field-diff') && container.querySelector('.html-field-value')) return false;
+
+    // Native table/grid rows have a label cell followed by exactly two value
+    // cells. Do not apply this positional inference to arbitrary label siblings.
+    if (label && container.matches('tr, [role="row"], .bolt-table-row, .ms-DetailsRow')) {
+      const cells = Array.from(container.children);
+      if (cells.length === 3 && cells[0] === labelBranch &&
+          cells.every(el => !isInsideForbiddenArea(el) && !el.querySelector('input, select, button, [role="checkbox"], [role="option"]'))) {
+        mountDiff(container, sanitizeFieldHtml(cells[1].innerHTML), sanitizeFieldHtml(cells[2].innerHTML), cells.slice(1), { field });
+        return true;
       }
     }
 
-    labelCandidates.forEach(labelEl => {
-      // Find row container (table row, bolt row, details row, or parent)
-      const container = labelEl.closest('tr, [role="row"], .bolt-table-row, .ms-DetailsRow') || labelEl.parentElement;
-      if (!container || container.closest('[data-ado-diff-processed]') || isInsideForbiddenArea(container)) return;
-
-      // Collect sibling elements in this row (the value cells)
-      const siblings = Array.from(container.children).filter(child => !child.contains(labelEl) && child !== labelEl);
-      if (siblings.length === 0) return;
-
-      let oldHtml = '';
-      let newHtml = '';
-      let targetElementToHide = [];
-
-      // Case A: 2 or more siblings (Old Value column and New Value column)
-      if (siblings.length >= 2) {
-        oldHtml = sanitizeFieldHtml(siblings[0].innerHTML);
-        newHtml = sanitizeFieldHtml(siblings[1].innerHTML);
-        targetElementToHide = [siblings[0], siblings[1]];
+    // One native value body may contain a struck-out previous value or a
+    // unified ins/del comparison. Keep its heading and other field changes.
+    const bodies = Array.from(container.children).filter(el => el !== labelBranch &&
+      !isInsideForbiddenArea(el) && !el.matches(CHANGE_BOUNDARY_SELECTOR) && !el.querySelector(CHANGE_BOUNDARY_SELECTOR));
+    const body = bodies.length === 1 ? bodies[0] : null;
+    if (body && !body.querySelector(VALUE_SELECTOR) &&
+        (body.querySelector(STRIKE_SELECTOR) || body.querySelector(INSERT_SELECTOR))) {
+      const revisions = extractStrikethroughDiff(body);
+      if (revisions) {
+        mountDiff(container, sanitizeFieldHtml(revisions.oldHtml), sanitizeFieldHtml(revisions.newHtml), [body], { field });
+        return true;
       }
-      // Case B: 1 sibling container that contains both Old (strikethrough) and New
-      else if (siblings.length === 1) {
-        const valContainer = siblings[0];
-        targetElementToHide = [valContainer];
-
-        // Prefer explicit values: strikethrough may be part of the description itself.
-        const oldEl = valContainer.querySelector('.old-value, [class*="oldValue"]');
-        const newEl = valContainer.querySelector('.new-value, [class*="newValue"]');
-        if (oldEl && newEl) {
-          oldHtml = sanitizeFieldHtml(oldEl.innerHTML);
-          newHtml = sanitizeFieldHtml(newEl.innerHTML);
-        } else {
-          const strikeData = extractStrikethroughDiff(valContainer);
-          if (strikeData) {
-            oldHtml = sanitizeFieldHtml(strikeData.oldHtml);
-            newHtml = sanitizeFieldHtml(strikeData.newHtml);
-          }
-        }
-      }
-
-      mountDiff(container, oldHtml, newHtml, targetElementToHide);
-    });
+    }
+    return false;
   }
 
-  /**
-   * STRATEGY 2: Strikethrough & Added Text Container Finder
-   * Scans strictly inside the active History container for containers that display struck-through text
-   * for the Description field.
-   */
-  function scanStrikethroughContainers(historyContainer) {
-    const strikeCandidates = historyContainer.querySelectorAll(
-      's, strike, del, [style*="line-through"], [class*="deleted"], [class*="strike"]'
+  function scanFieldsByLabel(historyContainer) {
+    const labels = Array.from(historyContainer.querySelectorAll('*')).filter(el =>
+      !['SCRIPT', 'STYLE', 'INPUT', 'TEXTAREA', 'BUTTON'].includes(el.tagName) &&
+      !el.closest('.ado-diff-widget, [data-ado-diff-processed]') &&
+      !el.closest(VALUE_SELECTOR + ', .html-field-value') && !isInsideForbiddenArea(el) && isVisible(el) &&
+      fieldForLabel(el) && !Array.from(el.children).some(fieldForLabel)
     );
 
-    strikeCandidates.forEach(strikeEl => {
-      if (strikeEl.closest('.ado-diff-widget, [data-ado-diff-processed]')) return;
-      if (isInsideForbiddenArea(strikeEl)) return;
-      // Find common parent that holds both strike and new text
-      const parent = strikeEl.parentElement;
-      if (!parent || parent.closest('[data-ado-diff-processed]') || isInsideForbiddenArea(parent)) return;
-      // Explicit old/new fields are handled by the label or feed scanner.
-      if (strikeEl.closest('.old-value, .new-value, [class*="oldValue"], [class*="newValue"]')) return;
+    labels.forEach(label => {
+      // Walk through heading/value wrappers, but never cross a field or feed
+      // boundary to borrow another field's old/new values.
+      const boundary = label.closest(CHANGE_BOUNDARY_SELECTOR);
+      for (let container = label.parentElement; container && historyContainer.contains(container); container = container.parentElement) {
+        if (mountFieldChange(container, label, fieldForLabel(label))) break;
+        if (container === boundary || container === historyContainer || isInsideForbiddenArea(container)) break;
+      }
+    });
 
-      // Check if parent or preceding row/card explicitly mentions Description
-      const contextNode = parent.closest('tr, [role="row"], .bolt-table-row, .ms-DetailsRow, .bolt-card, .history-item') || parent;
-      const contextText = contextNode.textContent.toLowerCase();
-      if (!contextText.includes('description')) return;
-
-      const strikeData = extractStrikethroughDiff(parent);
-      if (!strikeData) return;
-
-      const oldHtml = sanitizeFieldHtml(strikeData.oldHtml);
-      const newHtml = sanitizeFieldHtml(strikeData.newHtml);
-      mountDiff(parent, oldHtml, newHtml, [], { wrapText: true });
+    historyContainer.querySelectorAll('[data-field-name], [data-field-reference-name]').forEach(container => {
+      const field = fieldForContainer(container);
+      if (field) mountFieldChange(container, null, field);
     });
   }
 
-  /**
-   * STRATEGY 3: "Changed Description from: ... to: ..." Feed Parser
-   * Scans strictly inside the active History container for activity feed items changing Description.
-   */
   function scanFeedChanges(historyContainer) {
     const candidates = historyContainer.querySelectorAll(
       '.history-item, .feed-item, .bolt-card, [class*="history-item"], [class*="activityItem"]'
     );
-
     candidates.forEach(item => {
       if (item.closest('.ado-diff-widget, [data-ado-diff-processed]') ||
-          item.querySelector('[data-ado-diff-processed]') || isInsideForbiddenArea(item)) return;
-
-      const text = item.textContent || '';
-      if (!/(?:changed\s+description|description\s+changed|changed\s+the\s+description)/i.test(text)) {
-        return;
+          item.querySelector('[data-ado-diff-processed]') || isInsideForbiddenArea(item) || !isVisible(item)) return;
+      // Only the feed heading or direct label text identifies the field. A
+      // mention of a supported field inside another field's content is insufficient.
+      const text = cloneSource(item);
+      text.querySelectorAll(VALUE_SELECTOR + ', ' + CHANGE_SELECTOR).forEach(el => el.remove());
+      const match = FEED_FIELD.exec(text.textContent);
+      if (!match) return;
+      const field = fieldForName(match[1] || match[2]);
+      if (mountFieldChange(item, null, field)) return;
+      const directLabel = Array.from(item.childNodes).some(node => node.nodeType === 3 &&
+        FIELD_PREFIX.test(node.textContent));
+      if (directLabel && !item.querySelector(VALUE_SELECTOR)) {
+        const revisions = extractStrikethroughDiff(item);
+        if (revisions) mountDiff(item, sanitizeFieldHtml(revisions.oldHtml), sanitizeFieldHtml(revisions.newHtml), [], { wrapText: true, field });
       }
-
-      const valBlocks = [
-        item.querySelector('.old-value, [class*="oldValue"]'),
-        item.querySelector('.new-value, [class*="newValue"]')
-      ];
-      if (valBlocks.some(el => !el)) return;
-
-      const oldHtml = sanitizeFieldHtml(valBlocks[0].innerHTML);
-      const newHtml = sanitizeFieldHtml(valBlocks[1].innerHTML);
-      mountDiff(item, oldHtml, newHtml, valBlocks, { after: valBlocks[1] });
     });
   }
 
@@ -901,8 +1013,8 @@
 
     // Step 3: Run targeted scanners strictly inside the History container
     containers.forEach(container => {
-      scanDescriptionByLabel(container);
-      scanStrikethroughContainers(container);
+      scanNativeFields(container);
+      scanFieldsByLabel(container);
       scanFeedChanges(container);
     });
   }

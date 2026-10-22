@@ -1,9 +1,10 @@
 {
   "name": "ado-description-history-diff",
-  "version": "1.0.2",
-  "description": "Cross-browser extension for Firefox and Chrome that shows inline diffs for Description changes in Azure DevOps Work Item History.",
+  "version": "1.0.3",
+  "description": "Cross-browser extension that shows inline diffs for Description and Acceptance Criteria changes in Azure DevOps Work Item History.",
   "scripts": {
     "test": "node --test tests/*.test.js",
+    "test:unit": "node --test tests/diff.test.js tests/dom.test.js",
     "package": "node package-extension.js"
   },
   "keywords": [
@@ -18,6 +19,7 @@
   "license": "MIT",
   "devDependencies": {
     "dompurify": "3.4.17",
+    "jsdom": "26.1.0",
     "playwright": "^1.62.1"
   }
 }

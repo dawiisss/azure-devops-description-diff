@@ -1,13 +1,29 @@
 # Azure DevOps Description Diff
 
-A lightweight browser extension for **Google Chrome**, **Mozilla Firefox**, **Microsoft Edge**, and **Brave** that transforms the Azure DevOps Work Item History tab into an **inline diff viewer** for the `Description` field.
+A lightweight browser extension for **Google Chrome**, **Mozilla Firefox**, **Microsoft Edge**, and **Brave** that adds **inline diffs** for **Description** and **Acceptance Criteria** in Azure DevOps Work Item History.
 
-Instead of displaying the entire old description block and the entire new description block side-by-side or stacked, this extension calculates and highlights word-level additions and deletions directly inline.
+The extension highlights word-level additions and deletions in each supported field. Each revision has independent Inline, Side-by-Side, Original, Focus Changes, and Copy controls.
 
-**Current version:** 1.0.2  
+**Current version:** 1.0.3
+
+**Released:** 22 October 2026
 **Author:** dawiisss (K3to)  
 **Homepage:** [github.com/dawiisss](https://github.com/dawiisss/)  
 **Firefox add-on ID:** `ado-description-diff@dawiisss`
+
+### Version 1.0.3 — Description and Acceptance Criteria diffs
+
+Description and Acceptance Criteria now share the same native History, table-row, and activity-feed detection. Acceptance Criteria is recognised by its display label, `AcceptanceCriteria` alias, or `Microsoft.VSTS.Common.AcceptanceCriteria` reference name. Toolbar titles, Copy feedback, and empty-field labels identify the selected field. Both fields can be displayed and switched independently within a revision.
+
+Version 1.0.3 was released on **22 October 2026**. See [CHANGELOG.md](CHANGELOG.md) for the release notes.
+
+Azure DevOps' native History layout uses `.update-details .html-field-diff` with added and removed `.html-field-value` blocks. This version detects those containers, reads their operation classes or outer `ins`/`del` wrappers, and removes the native whole-value wrapper before computing word-level changes. Added-only and deleted-only descriptions are supported, as are markdown previews with their own Description heading. The field heading remains visible and Original restores the native view.
+
+Description labels in the History filter could previously be mistaken for revision content. Detection excludes menus, field filters, selection controls, and hidden labels, and keeps Description content isolated from other rich-text fields. The shared work-item main content wrapper no longer blocks active History content.
+
+After updating, reload the extension in your browser's extension manager, then refresh the Azure DevOps tab. This clears any controls injected into the filter by the previous version. The browser toolbar popup and Options page show **1.0.3**.
+
+The supplied Description HTML snippet is included verbatim in a DOM regression test, alongside native Acceptance Criteria fixtures. All 35 diff-engine and DOM tests pass. DOM tests exercise the bundled sanitizer, diff engine, content script, observers, and restoration with simulated visibility geometry. They do not verify visual layout. Chromium cannot launch in this sandbox, so browser rendering and the authenticated live page remain unverified.
 
 ---
 
@@ -19,8 +35,8 @@ Instead of displaying the entire old description block and the entire new descri
   - **Side-by-Side (Split)**: Synchronized previous vs. current columns with highlights.
   - **Original**: Instant 1-click toggle back to the native Azure DevOps view.
 - **🔍 "Focus Changes" Mode**: For long multi-paragraph descriptions where only a few words changed, collapses unchanged sections so you can immediately see the modification.
-- **📋 One-Click Copy**: Copy updated description text directly to clipboard.
-- **📊 Change Statistics**: Displays word change counters (`+15`, `-3`) on each description revision.
+- **📋 One-Click Copy**: Copy the updated field text directly to clipboard.
+- **📊 Change Statistics**: Displays word change counters (`+15`, `-3`) for each supported field revision.
 - **🌙 Dark Mode & Light Mode**: Automatically adapts to Azure DevOps themes.
 - **🔄 Live Revision Switching**: Smoothly re-computes diffs when clicking through revisions in the left timeline.
 - **🔒 Local Diff Processing**: Computes description diffs in your browser without uploading descriptions or sending telemetry or analytics. See the privacy details below for browser sync and embedded resources.
@@ -31,8 +47,8 @@ Instead of displaying the entire old description block and the entire new descri
 ## 🔒 Privacy & Data Handling
 
 - **No changes to Azure DevOps data:** The extension only changes how the History page is displayed in your browser. It does not edit or save work items, descriptions, revisions, or comments. Disabling it restores the original display.
-- **No description uploads or telemetry:** Description text is processed locally to calculate diffs. The extension has no upload, telemetry, or analytics calls.
-- **Preferences may sync:** Settings and custom hostnames use the browser's extension sync storage when available, falling back to local extension storage. They may sync through your browser account. Description text is not stored in either storage area.
+- **No field uploads or telemetry:** Description and Acceptance Criteria text is processed locally to calculate diffs. The extension has no upload, telemetry, or analytics calls.
+- **Preferences may sync:** Settings and custom hostnames use the browser's extension sync storage when available, falling back to local extension storage. They may sync through your browser account. Field text is not stored in either storage area.
 - **Embedded resources may make requests:** Images in generated views can load from their original servers. The original Azure DevOps description can also contain embedded resources. Local diff processing does not mean zero network activity.
 - **Safe rich-text rendering:** Bundled DOMPurify sanitizes descriptions before diffing and sanitizes the generated views again before display or copying. Formatting, tables, links, and images are supported; scripts, event handlers, unsafe URLs, inline styles, forms, SVG, and embedded frames are removed from the generated views.
 - **Clipboard access is user-initiated:** Clicking **Copy** writes the current description text to your clipboard.
@@ -95,7 +111,7 @@ The testbed includes:
 
 ## 🧪 Running Tests
 
-Unit tests verify the diff engine, formatting, split-view structure, entities, and performance. Browser tests run the actual sanitizer and content script in Chromium and cover revision switching, restoration, custom-domain activation, themes, preferences, History tab isolation, unsafe HTML and URLs, and sanitized clipboard output. The latest verification passed all 30 tests.
+The 12 diff-engine tests verify formatting, split-view structure, entities, and performance. The 23 DOM tests run the actual sanitizer and content script against native markup for both fields, including initial creation, removal, operation ordering, authored formatting, revision reuse, restoration, filter/editor isolation, clipboard output, and unsafe HTML. All 35 passed for this update. Browser tests additionally cover rendered visibility, preferences, domain activation, themes, and the standalone demo; those tests require Chromium and could not run in the sandbox.
 
 Use Node.js 20 or later and npm to install the development dependencies.
 
@@ -104,6 +120,8 @@ npm ci
 # Install Chromium for Playwright if a system /usr/bin/chromium is unavailable:
 npx playwright install chromium
 npm test
+# Run diff-engine and DOM tests without Chromium:
+npm run test:unit
 # Run only the diff-engine unit tests:
 node --test tests/diff.test.js
 ```
@@ -140,11 +158,14 @@ azure-devops-description-diff/
 │   └── testbed.html           # Standalone interactive preview page
 ├── tests/
 │   ├── browser.test.js        # Content-script browser regression tests
+│   ├── dom.test.js            # Native History DOM regression tests
+│   ├── fixtures/              # Shared native History markup fixtures
 │   └── diff.test.js           # Diff-engine unit tests
 ├── package-extension.js       # Distribution packaging script
 ├── package.json               # Development scripts
 ├── package-lock.json          # Exact dependency versions for reproducible builds
 ├── README.md                  # Setup, features, privacy, and testing
+├── CHANGELOG.md               # Version history and release notes
 ├── LICENSE                    # MIT license for the project
 ├── SUBMISSION.md              # Version notes and reviewer instructions
 └── dist/

@@ -25,6 +25,7 @@ universal_zip_path = os.path.join(dist_dir, 'ado-description-diff.zip')
 
 files_to_pack = [
     'LICENSE',
+    'CHANGELOG.md',
     'manifest.json',
     'content/content.js',
     'content/htmldiff.js',
@@ -59,7 +60,7 @@ print(f"\\nSuccessfully generated universal zip: {universal_zip_path} ({os.path.
 source_zip_path = os.path.join(dist_dir, 'ado-description-diff-source.zip')
 source_files = [
     'manifest.json', 'package.json', 'package-lock.json',
-    'package-extension.js', 'README.md', 'SUBMISSION.md', 'LICENSE'
+    'package-extension.js', 'README.md', 'CHANGELOG.md', 'SUBMISSION.md', 'LICENSE'
 ]
 for folder in ['content', 'popup', 'options', 'icons', 'demo', 'tests', 'node_modules/dompurify']:
     for directory, subdirectories, filenames in os.walk(folder):
