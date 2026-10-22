@@ -275,6 +275,19 @@ input:checked + .slider:before {
   font-weight: 500;
 }
 
+.btn-grant-domain {
+  border: 1px solid #0078d4;
+  border-radius: 4px;
+  background: #fff;
+  color: #0078d4;
+  padding: 5px 10px;
+  cursor: pointer;
+  margin-left: auto;
+}
+.domain-name { flex: 1; overflow-wrap: anywhere; }
+.domain-item { gap: 12px; flex-wrap: wrap; }
+.save-toast.error { background: #a4262c; }
+
 .btn-remove-domain:hover {
   text-decoration: underline;
 }

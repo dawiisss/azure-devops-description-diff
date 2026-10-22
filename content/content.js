@@ -14,22 +14,25 @@
     return;
   }
   window.__ADO_DESCRIPTION_DIFF_V103_INITIALIZED__ = true;
+  let hostAccessGranted = !(typeof chrome !== 'undefined' && chrome.runtime?.sendMessage);
 
   // Match supported hosts exactly; DOM markers and URL substrings are not an allowlist.
   function isAzureDevOps() {
+    if (!hostAccessGranted) return false;
     const host = window.location.hostname.toLowerCase();
     const protocol = window.location.protocol;
     // Keep the standalone demo available without enabling arbitrary web pages.
-    const localDemo = window.location.pathname.endsWith('/demo/testbed.html') &&
+    const localDemo = ['/demo/testbed.html', '/demo/store-preview.html'].some(path => window.location.pathname.endsWith(path)) &&
       (protocol === 'file:' || ['localhost', '127.0.0.1', '[::1]'].includes(host));
     if (localDemo) return true;
     if (!['http:', 'https:'].includes(protocol)) return false;
     if (host === 'dev.azure.com' || host.endsWith('.visualstudio.com')) return true;
     return config.customDomains.some(pattern => {
       if (typeof pattern !== 'string') return false;
-      const match = /^\*:\/\/([^/]+)\/\*$/.exec(pattern.toLowerCase());
+      const match = /^(https?|\*):\/\/([^/]+)\/\*$/.exec(pattern.toLowerCase());
       if (!match) return false;
-      const domain = match[1];
+      if (match[1] !== '*' && match[1] + ':' !== protocol) return false;
+      const domain = match[2];
       if (domain.startsWith('*.')) {
         return host === domain.slice(2) || host.endsWith('.' + domain.slice(2));
       }
@@ -1070,5 +1073,23 @@
   }
 
   document.addEventListener('DOMContentLoaded', updateActivation);
+  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    const recheckAccess = () => {
+      chrome.runtime.sendMessage({ type: 'ado-diff:host-access' }, response => {
+        const error = chrome.runtime.lastError;
+        hostAccessGranted = !error && response?.allowed === true;
+        updateActivation();
+      });
+    };
+    chrome.runtime.onMessage.addListener((message, sender, respond) => {
+      if (message?.type === 'ado-diff:recheck-access') {
+        recheckAccess();
+        respond({ ok: true });
+      } else if (message?.type === 'ado-diff:status') {
+        respond({ supported: isAzureDevOps(), enabled: config.enabled });
+      }
+    });
+    recheckAccess();
+  }
   loadConfig();
 })();

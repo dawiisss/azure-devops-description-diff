@@ -1,142 +1,118 @@
-/**
- * Azure DevOps Description Diff - Options Page Script
- */
-
+/** Configure display preferences and browser-approved custom servers. */
 document.addEventListener('DOMContentLoaded', () => {
-  const optDefaultView = document.getElementById('optDefaultView');
-  const optCollapseUnchanged = document.getElementById('optCollapseUnchanged');
-  const newDomainInput = document.getElementById('newDomainInput');
-  const btnAddDomain = document.getElementById('btnAddDomain');
-  const domainList = document.getElementById('domainList');
-  const emptyDomainsMsg = document.getElementById('emptyDomainsMsg');
-  const saveToast = document.getElementById('saveToast');
+  'use strict';
+  const api = globalThis.browser || globalThis.chrome;
+  const sites = globalThis.AdoDiffSites;
+  const storage = api.storage.sync || api.storage.local;
+  const view = document.getElementById('optDefaultView');
+  const focus = document.getElementById('optCollapseUnchanged');
+  const input = document.getElementById('newDomainInput');
+  const add = document.getElementById('btnAddDomain');
+  const list = document.getElementById('domainList');
+  const empty = document.getElementById('emptyDomainsMsg');
+  const toast = document.getElementById('saveToast');
+  let domains = [];
 
-  const storage = (typeof chrome !== 'undefined' && chrome.storage) ? (chrome.storage.sync || chrome.storage.local) : null;
-
-  let currentCustomDomains = [];
-
-  // Show toast notification
-  function showToast(msg = 'Preferences saved') {
-    saveToast.textContent = msg;
-    saveToast.classList.add('show');
-    setTimeout(() => {
-      saveToast.classList.remove('show');
-    }, 2000);
+  function notify(message, error = false) {
+    toast.textContent = message;
+    toast.classList.toggle('error', error);
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3500);
   }
 
-  // Load preferences
-  if (storage) {
-    storage.get(['defaultView', 'collapseUnchanged', 'customDomains'], (items) => {
-      if (items) {
-        if (items.defaultView) {
-          optDefaultView.value = items.defaultView;
-        }
-        if (typeof items.collapseUnchanged === 'boolean') {
-          optCollapseUnchanged.checked = items.collapseUnchanged;
-        }
-        if (Array.isArray(items.customDomains)) {
-          currentCustomDomains = items.customDomains;
-        }
-      }
-      renderDomainList();
-    });
+  async function activate() {
+    const result = await api.runtime.sendMessage({ type: 'ado-diff:sync-sites' });
+    if (!result?.ok) throw new Error('Site saved, but activation failed. Reload the extension and try again.');
   }
 
-  // Save default view change
-  optDefaultView.addEventListener('change', () => {
-    if (storage) {
-      storage.set({ defaultView: optDefaultView.value }, () => {
-        showToast();
-      });
-    }
-  });
+  async function requestSite(pattern) {
+    // This call must remain in the click handler, before any asynchronous work.
+    const granted = await api.permissions.request({ origins: [pattern] });
+    if (!granted) { notify('Site access was not granted.'); return false; }
+    if (!domains.includes(pattern)) domains.push(pattern);
+    await storage.set({ customDomains: domains });
+    await activate();
+    await render();
+    notify('Site connected. Refresh any already-open embedded work item frames.');
+    return true;
+  }
 
-  // Save focus changes toggle
-  optCollapseUnchanged.addEventListener('change', () => {
-    if (storage) {
-      storage.set({ collapseUnchanged: optCollapseUnchanged.checked }, () => {
-        showToast();
-      });
-    }
-  });
-
-  // Render domain list
-  function renderDomainList() {
-    domainList.querySelectorAll('.domain-item').forEach(el => el.remove());
-
-    if (currentCustomDomains.length === 0) {
-      emptyDomainsMsg.style.display = 'block';
-      return;
-    }
-
-    emptyDomainsMsg.style.display = 'none';
-
-    currentCustomDomains.forEach((domain, index) => {
+  async function render() {
+    const permissions = await Promise.all(domains.map(pattern => api.permissions.contains({ origins: [pattern] })));
+    list.querySelectorAll('.domain-item').forEach(element => element.remove());
+    empty.style.display = domains.length ? 'none' : 'block';
+    domains.forEach((pattern, index) => {
       const item = document.createElement('div');
       item.className = 'domain-item';
-
-      const span = document.createElement('span');
-      span.className = 'domain-name';
-      span.textContent = domain;
-
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'btn-remove-domain';
-      removeBtn.textContent = 'Remove';
-      removeBtn.addEventListener('click', () => {
-        removeDomain(index);
+      const name = document.createElement('span');
+      name.className = 'domain-name';
+      name.textContent = pattern.replace(/\/\*$/, '') + (permissions[index] ? '' : ' — access needed');
+      item.appendChild(name);
+      if (!permissions[index]) {
+        const grant = document.createElement('button');
+        grant.type = 'button';
+        grant.className = 'btn-grant-domain';
+        grant.textContent = 'Grant access';
+        grant.addEventListener('click', async () => {
+          grant.disabled = true;
+          try { await requestSite(pattern); }
+          catch (error) { notify(error.message, true); }
+          finally { grant.disabled = false; }
+        });
+        item.appendChild(grant);
+      }
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'btn-remove-domain';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', async () => {
+        remove.disabled = true;
+        try {
+          // Revoke access before dropping the saved entry, so failures are visible.
+          const host = /^\w+:\/\/([^/]+)/.exec(pattern)?.[1];
+          if (!host || !sites.isCloudHost(host)) await api.permissions.remove({ origins: [pattern] });
+          domains = domains.filter(value => value !== pattern);
+          await storage.set({ customDomains: domains });
+          await activate();
+          await render();
+          notify('Site removed.');
+        } catch (error) { notify(error.message, true); remove.disabled = false; }
       });
-
-      item.appendChild(span);
-      item.appendChild(removeBtn);
-      domainList.appendChild(item);
+      item.appendChild(remove);
+      list.appendChild(item);
     });
   }
 
-  // Add custom domain
-  function addDomain() {
-    let raw = newDomainInput.value.trim();
-    if (!raw) return;
-
-    // Normalize domain
+  async function addDomain() {
+    if (add.disabled || !input.value.trim()) return;
+    add.disabled = true;
     try {
-      if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
-        raw = 'https://' + raw;
+      const pattern = sites.normalizeDomain(input.value);
+      if (sites.isCloudHost(new URL(pattern.replace(/\*$/, '')).hostname)) {
+        notify('Azure DevOps cloud sites are already enabled.');
+        return;
       }
-      const url = new URL(raw);
-      const originPattern = `*://${url.hostname}/*`;
-
-      if (!currentCustomDomains.includes(originPattern)) {
-        currentCustomDomains.push(originPattern);
-        if (storage) {
-          storage.set({ customDomains: currentCustomDomains }, () => {
-            newDomainInput.value = '';
-            renderDomainList();
-            showToast('Domain added successfully');
-          });
-        }
-      } else {
-        alert('This domain is already in the list.');
-      }
-    } catch (e) {
-      alert('Invalid URL or domain format. Please enter a valid host, e.g. tfs.company.com');
-    }
+      if (await requestSite(pattern)) input.value = '';
+    } catch (error) { notify(error.message || 'Could not connect this site.', true); }
+    finally { add.disabled = false; }
   }
 
-  // Remove custom domain
-  function removeDomain(index) {
-    currentCustomDomains.splice(index, 1);
-    if (storage) {
-      storage.set({ customDomains: currentCustomDomains }, () => {
-        renderDomainList();
-        showToast('Domain removed');
-      });
-    }
-  }
-
-  btnAddDomain.addEventListener('click', addDomain);
-  newDomainInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      addDomain();
-    }
+  add.addEventListener('click', addDomain);
+  input.addEventListener('keydown', event => { if (event.key === 'Enter') addDomain(); });
+  view.addEventListener('change', async () => {
+    try { await storage.set({ defaultView: view.value }); notify('Preferences saved'); }
+    catch { notify('Could not save preferences.', true); }
   });
+  focus.addEventListener('change', async () => {
+    try { await storage.set({ collapseUnchanged: focus.checked }); notify('Preferences saved'); }
+    catch { notify('Could not save preferences.', true); }
+  });
+  api.permissions.onAdded.addListener(() => { render().catch(() => {}); });
+  api.permissions.onRemoved.addListener(() => { render().catch(() => {}); });
+  storage.get(['defaultView', 'collapseUnchanged', 'customDomains']).then(async settings => {
+    if (['inline', 'split', 'original'].includes(settings.defaultView)) view.value = settings.defaultView;
+    focus.checked = settings.collapseUnchanged === true;
+    domains = sites.patterns(settings.customDomains);
+    await render();
+  }).catch(() => notify('Could not load preferences.', true));
 });

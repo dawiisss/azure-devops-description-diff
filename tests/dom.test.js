@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '..');
 const scripts = ['content/vendor/purify.js', 'content/htmldiff.js', 'content/content.js']
   .map(name => fs.readFileSync(path.join(root, name), 'utf8'));
 
-function fixture(t, html, { tabs = true } = {}) {
+function fixture(t, html, { tabs = true, runtime = null } = {}) {
   const errors = [];
   const console = new VirtualConsole();
   console.on('jsdomError', error => errors.push(error.message));
@@ -34,6 +34,7 @@ function fixture(t, html, { tabs = true } = {}) {
     sync: { get(keys, callback) { callback({ ...values }); } },
     onChanged: { addListener(listener) { listeners.push(listener); } }
   } };
+  if (runtime) window.chrome.runtime = runtime;
   const changeSettings = updates => {
     const changes = {};
     for (const [key, newValue] of Object.entries(updates)) {
@@ -252,4 +253,21 @@ test('Acceptance Criteria revision updates preserve the separate Description wid
   assert.equal(document.querySelector('.ado-diff-widget'), descriptionWidget);
   assert.equal(document.querySelectorAll('.ado-diff-widget').length, 2);
   assert.equal(criteriaField.querySelector('.ado-diff-title-badge').textContent, 'Acceptance Criteria Diff');
+});
+
+test('browser permission revocation restores native content and regrant permits activation', t => {
+  let allowed = true;
+  let listener;
+  const runtime = {
+    sendMessage(message, callback) { callback({ allowed }); },
+    onMessage: { addListener(value) { listener = value; } }
+  };
+  const { document } = fixture(t, nativeField({ oldHtml: '<p>Old</p>', newHtml: '<p>New</p>' }), { runtime });
+  assert.equal(document.querySelectorAll('.ado-diff-widget').length, 1);
+  allowed = false;
+  listener({ type: 'ado-diff:recheck-access' }, {}, () => {});
+  assert.equal(document.querySelectorAll('.ado-diff-widget, .ado-diff-hidden-raw').length, 0);
+  allowed = true;
+  listener({ type: 'ado-diff:recheck-access' }, {}, () => {});
+  assert.equal(document.querySelectorAll('.ado-diff-widget').length, 1);
 });

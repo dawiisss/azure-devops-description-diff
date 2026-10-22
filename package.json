@@ -3,9 +3,14 @@
   "version": "1.0.3",
   "description": "Cross-browser extension that shows inline diffs for Description and Acceptance Criteria changes in Azure DevOps Work Item History.",
   "scripts": {
+    "pretest": "npm run package",
     "test": "node --test tests/*.test.js",
-    "test:unit": "node --test tests/diff.test.js tests/dom.test.js",
-    "package": "node package-extension.js"
+    "test:unit": "node --test tests/diff.test.js tests/dom.test.js tests/access.test.js",
+    "pretest:package": "npm run package",
+    "test:package": "node --test tests/package.test.js",
+    "test:browser": "node --test tests/browser.test.js",
+    "package": "node package-extension.js",
+    "store:images": "node scripts/capture-store-images.js"
   },
   "keywords": [
     "azure-devops",

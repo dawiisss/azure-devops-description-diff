@@ -29,18 +29,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Check active tab URL
+  // Ask our content script, rather than infer activation from a URL substring.
   if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs && tabs[0];
-      if (activeTab && activeTab.url) {
-        const url = activeTab.url.toLowerCase();
-        if (url.includes('dev.azure.com') || url.includes('.visualstudio.com')) {
-          statusIndicator.classList.add('active');
-          statusText.textContent = 'Active on Azure DevOps';
-        } else {
-          statusText.textContent = 'Navigate to Azure DevOps';
-        }
+      if (activeTab?.id !== undefined) {
+        chrome.tabs.sendMessage(activeTab.id, { type: 'ado-diff:status' }, result => {
+          const error = chrome.runtime.lastError;
+          const active = !error && result?.supported && result.enabled;
+          statusIndicator.classList.toggle('active', !!active);
+          statusText.textContent = active ? 'Active on this site' :
+            result?.supported ? 'Inline diffs disabled' : 'Open Azure DevOps or connect a site';
+        });
       } else {
         statusText.textContent = 'Ready';
       }

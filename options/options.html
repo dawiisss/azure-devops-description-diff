@@ -54,12 +54,14 @@
         <h2 class="card-title">On-Premise Azure DevOps / TFS Domains</h2>
         <p class="card-desc">
           By default, this extension runs on <code>dev.azure.com</code> and <code>*.visualstudio.com</code>.
-          If your team uses an internal on-premise Azure DevOps Server or TFS instance, add its domain or URL pattern below.
+          To use an internal Azure DevOps Server or TFS site, enter its address and approve access to that site.
+          Addresses without a scheme use HTTPS. Use an explicit <code>http://</code> address for an HTTP server.
+          Site access covers that hostname on all ports; URL paths are ignored.
         </p>
 
         <div class="add-domain-box">
           <input type="text" id="newDomainInput" placeholder="e.g. tfs.company.com or https://devops.internal" class="text-input">
-          <button type="button" id="btnAddDomain" class="btn btn-primary">Add Domain</button>
+          <button type="button" id="btnAddDomain" class="btn btn-primary">Connect Site</button>
         </div>
 
         <div class="domain-list" id="domainList">
@@ -72,7 +74,9 @@
         <h2 class="card-title">About & Support</h2>
         <p class="card-desc">
           <strong>Azure DevOps Description Diff</strong> is a cross-browser extension designed for Firefox and Chrome.
-          It runs 100% locally in your browser with zero data collection.
+          Description and Acceptance Criteria content is processed locally and is not uploaded.
+          Preferences may sync through your browser account. Embedded images may load from their original servers.
+          <a href="../privacy.html" target="_blank" rel="noopener">Privacy policy</a>
         </p>
         <div class="about-meta">
           <span>Version 1.0.3</span>
@@ -83,9 +87,10 @@
     </main>
 
     <!-- Save Toast -->
-    <div id="saveToast" class="save-toast">Preferences saved</div>
+    <div id="saveToast" class="save-toast" role="status" aria-live="polite">Preferences saved</div>
   </div>
 
+  <script src="../shared/sites.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

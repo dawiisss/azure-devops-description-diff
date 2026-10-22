@@ -26,15 +26,26 @@
     "open_in_tab": true
   },
   "permissions": [
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://dev.azure.com/*",
+    "https://*.visualstudio.com/*"
   ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  "minimum_chrome_version": "109",
   "content_scripts": [
     {
       "matches": [
-        "<all_urls>"
+        "https://dev.azure.com/*",
+        "https://*.visualstudio.com/*"
       ],
       "all_frames": true,
       "run_at": "document_idle",
@@ -47,16 +58,5 @@
         "content/styles.css"
       ]
     }
-  ],
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "ado-description-diff@dawiisss",
-      "strict_min_version": "109.0",
-      "data_collection_permissions": {
-        "required": [
-          "none"
-        ]
-      }
-    }
-  }
+  ]
 }
