@@ -1,5 +1,7 @@
 # Azure DevOps Description Diff
 
+[![Install on Firefox](https://img.shields.io/badge/Install_on-Firefox-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/azure-devops-description-diff/)
+
 A lightweight browser extension for **Google Chrome**, **Mozilla Firefox**, **Microsoft Edge**, and **Brave** that adds **inline diffs** for **Description** and **Acceptance Criteria** in Azure DevOps Work Item History.
 
 The extension highlights word-level additions and deletions in each supported field. Each revision has independent Inline, Side-by-Side, Original, Focus Changes, and Copy controls.
@@ -7,25 +9,7 @@ The extension highlights word-level additions and deletions in each supported fi
 **Current version:** 1.0.3
 
 **Released:** 22 October 2026
-**Author:** dawiisss (K3to)  
-**Homepage:** [github.com/dawiisss](https://github.com/dawiisss/)  
 **Firefox add-on ID:** `ado-description-diff@dawiisss`
-
-### Version 1.0.3 — Description and Acceptance Criteria diffs
-
-Description and Acceptance Criteria now share the same native History, table-row, and activity-feed detection. Acceptance Criteria is recognised by its display label, `AcceptanceCriteria` alias, or `Microsoft.VSTS.Common.AcceptanceCriteria` reference name. Toolbar titles, Copy feedback, and empty-field labels identify the selected field. Both fields can be displayed and switched independently within a revision.
-
-Version 1.0.3 was released on **22 October 2026**. See [CHANGELOG.md](CHANGELOG.md) for the release notes.
-
-Azure DevOps' native History layout uses `.update-details .html-field-diff` with added and removed `.html-field-value` blocks. This version detects those containers, reads their operation classes or outer `ins`/`del` wrappers, and removes the native whole-value wrapper before computing word-level changes. Added-only and deleted-only descriptions are supported, as are markdown previews with their own Description heading. The field heading remains visible and Original restores the native view.
-
-Description labels in the History filter could previously be mistaken for revision content. Detection excludes menus, field filters, selection controls, and hidden labels, and keeps Description content isolated from other rich-text fields. The shared work-item main content wrapper no longer blocks active History content.
-
-After updating, reload the extension in your browser's extension manager, then refresh the Azure DevOps tab. This clears any controls injected into the filter by the previous version. The browser toolbar popup and Options page show **1.0.3**.
-
-The supplied Description HTML snippet is included verbatim in a DOM regression test, alongside native Acceptance Criteria fixtures. All 35 diff-engine and DOM tests pass. DOM tests exercise the bundled sanitizer, diff engine, content script, observers, and restoration with simulated visibility geometry. They do not verify visual layout. Chromium cannot launch in this sandbox, so browser rendering and the authenticated live page remain unverified.
-
----
 
 ## ✨ Features
 
@@ -57,9 +41,17 @@ The supplied Description HTML snippet is included verbatim in a DOM regression t
 
 ## 🚀 Installation Guide
 
+### Install on Mozilla Firefox
+
+1. Open the [Azure DevOps Description Diff listing on Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/azure-devops-description-diff/) in Firefox.
+2. Click **Add to Firefox** and approve the requested permissions.
+3. Open an Azure DevOps work item and click the **History** tab.
+
+### Load a development copy
+
 The steps below load a development copy. Download or clone the project first. The bundled sanitizer is included in `content/vendor/`, so loading the extension or opening the demo does not require installing development dependencies.
 
-### Option A: Google Chrome / Microsoft Edge / Brave
+#### Option A: Google Chrome / Microsoft Edge / Brave
 
 1. Open your browser and navigate to `chrome://extensions` (or `edge://extensions`).
 2. Enable **Developer mode** (toggle switch in the top-right corner).
@@ -69,14 +61,14 @@ The steps below load a development copy. Download or clone the project first. Th
 
 ---
 
-### Option B: Mozilla Firefox
+#### Option B: Mozilla Firefox
 
 1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on...**.
 3. Select either `manifest.json` or `dist/ado-description-diff.zip` from this directory.
 4. The extension will appear in your installed temporary extensions list and start functioning immediately.
 
-Firefox removes temporary add-ons when it restarts. For a permanent installation in standard Firefox, use a Mozilla-signed release. The ZIP produced by this project's packaging command is unsigned until Mozilla signs it. The manifest declares Firefox 109 or later; the automated browser tests currently run in Chromium rather than Firefox.
+Firefox removes temporary add-ons when it restarts. For a permanent installation in standard Firefox, use the [published Firefox Add-ons release](https://addons.mozilla.org/en-US/firefox/addon/azure-devops-description-diff/). The ZIP produced by this project's packaging command is unsigned until Mozilla signs it. The manifest declares Firefox 109 or later; the automated browser tests currently run in Chromium rather than Firefox.
 
 ---
 
